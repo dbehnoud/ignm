@@ -8,9 +8,7 @@ from scipy.interpolate import interp1d
 
 
 def solver(input_filename,ts,yin,j0):
-
-""" Solve the 1-D ignition model """
-
+    """ Solve the 1-D ignition model """
 
     class Mesh:     
         def __init__(self,n,z,x):
@@ -22,7 +20,6 @@ def solver(input_filename,ts,yin,j0):
             # Grid cross-sectional area
             self.a = dx**2 
             self.dv = self.a * self.dz 
-
 
     class ignitionOde:
         def __init__(self,gas,mesh):
@@ -55,34 +52,48 @@ def solver(input_filename,ts,yin,j0):
                 dh[:,i] = gas.partial_molar_enthalpies
                 wdot[:,i] = gas.net_production_rates          
                 cp[i] = gas.cp
-                rho[i] = gas.density
                 # Diffusion coefficient
-                d[i] = gas.thermal_conductivity/(rho[i]*cp[i])
+                d[i] = gas.thermal_conductivity/(rhoa*cp[i])
                 # Evaluate heat capacity and diffusion coefficient at side boundaries
                 cps[i] = (cp[i]+cpa)/2
                 ds[i] = d[i]*da/(da+(d[i]-da)/2)
                 
-            
             Tprime[0] = (-(np.dot(dh[:,0],wdot[:,0])) - Jin(t)*cp[0]*(T[0]-Tin(t))/self.mesh.dz\
-                         + 4*rho[0]*ds[0]*cps[0]*(300-T[0])/(self.mesh.dx**2))/(rho[0]*cp[0])
-            
+                         + 4*rhoa*ds[0]*cps[0]*(300-T[0])/(self.mesh.dx**2))/(rhoa*cp[0])
             # Diffusive fluxes at the side boundaries
-            jxw = rho[0]*ds[0]*(yj[:,0]-ya)/(self.mesh.dx/2)            
-            jxe = rho[0]*ds[0]*(ya-yj[:,0])/(self.mesh.dx/2) 
+            jxw = rhoa*ds[0]*(yj[:,0]-ya)/(self.mesh.dx/2)            
+            jxe = rhoa*ds[0]*(ya-yj[:,0])/(self.mesh.dx/2) 
             
-            dyjdt[:,0] = (wdot[:,0]*self.MW - Jin(t)*(yj[:,0]-yin(t))/self.mesh.dz1 -(jxe-jxw)/self.mesh.dx)/(rho[0])            
+            dyjdt[:,0] = (wdot[:,0]*self.MW - Jin(t)*(yj[:,0]-yin(t))/self.mesh.dz\
+                          -(jxe-jxw)/self.mesh.dx)/(rhoa)
+            
+            for i in range(1,self.mesh.n):
+                Tprime[i] = (-(np.dot(dh[:,i],wdot[:,i])) - Jin(t)*cp[i]*(T[i]-T[i-1])/self.mesh.dz\
+                             + 4*rhoa*ds[i]*cps[i]*(300-T[i])/(self.mesh.dx**2))/(rhoa*cp[i])
+            
+                # Diffusive fluxes at the side boundaries
+                jxw = rhoa*ds[i]*(yj[:,i]-ya)/(self.mesh.dx/2)            
+                jxe = rhoa*ds[i]*(ya-yj[:,i])/(self.mesh.dx/2) 
+            
+                dyjdt[:,i] = (wdot[:,i]*self.MW - Jin(t)*(yj[:,i]-yin(t))/self.mesh.dz\
+                              -(jxe-jxw)/self.mesh.dx)/(rhoa)            
             
             print(t)
             return np.hstack((dyjdt.flatten(), Tprime))
-            
-
-    gas = ct.Solution(chem)
+    
     
     # Input data
     with open(input_filename, 'r') as f:
             inputs = yaml.safe_load(f)
     n = inputs['grid_size']
-    
+    z = inputs['domain_size_z']
+    x = inputs['domain_size_x']
+    chem = inputs['mechanism']
+    T0 = inputs['initial_temperature']
+    P = inputs['pressure']
+    mix0 = inputs['mixture']
+    t_sim = inputs['simulation_time']
+    dt_max = inputs['max_time_step']
     ts1 = genfromtxt(ts, delimiter=',')
     yin1 = genfromtxt(yin, delimiter=',')
     j01 = genfromtxt(j0, delimiter=',')
@@ -100,25 +111,33 @@ def solver(input_filename,ts,yin,j0):
         return yinter
     
     # Initial condition
+    gas = ct.Solution(chem)
     gas.TPY = T0, P, mix0
-    y0 = np.hstack((gas.Y, gas.T))
     
     # Store ambient air properties
     ya = gas.Y
     cpa = gas.cp_mass
     da = gas.thermal_conductivity/(gas.density*cpa)
+    rhoa = gas.density
 
     # Set up objects representing the ODE and the solver
     mesh = Mesh(n,z,x)
+    yj0 = np.zeros(gas.n_species,mesh.n)
+    T1 = np.zeros(mesh.n)+T0
+    for i in range(0,mesh.n):
+        yj0[:,i] = ya
+    y0 = np.hstack((yj0.flatten(), T1))
+    y = pd.DataFrame()
+    y.loc[0] = [y0[item] for item in range(0,y0.size)]+[0]
     ode1 = ignitionOde(gas,mesh)
     solver1 = ode(ode1).set_integrator('dvode', method='bdf', order = 15)
     solver1.set_initial_value(y0, 0)
     dt = dt_max
-
+    count = 1
+    
     # Integrate the equations 
     while solver1.successful() and solver1.t < t_sim:
         solver1.integrate(solver1.t + dt)
-        
-    return y, t
-        
-    
+        y.loc[count] = [solver1.y[item] for item in range(0,y0.size)]+[solver1.t]
+        count += 1
+    return y
