@@ -1,0 +1,9 @@
+grid_size: 3
+domain_size_z: 0.01
+domain_size_x: 1
+initial_temperature: 300.0
+pressure: 101325.0
+max_time_step: 0.1
+mechanism: 'ignm/data/bio1412_chem.cti'
+mixture: 'Ar:1,O2:20,N2:78'
+simulation_time: 100
