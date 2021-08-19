@@ -49,8 +49,9 @@ def solver(input_filename,ts,yin,j0):
                 yj[:,i] = y[self.nsp*i:self.nsp*i+self.nsp]
                 gas.set_unnormalized_mass_fractions(yj[:,i])
                 gas.TP = T[i], 101325.0
-                dh[:,i] = gas.partial_molar_enthalpies
-                wdot[:,i] = gas.net_production_rates          
+                if T[i]>600:
+                    dh[:,i] = gas.partial_molar_enthalpies
+                    wdot[:,i] = gas.net_production_rates           
                 cp[i] = gas.cp
                 # Diffusion coefficient
                 d[i] = gas.thermal_conductivity/(rhoa*cp[i])
