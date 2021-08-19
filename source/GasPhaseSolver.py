@@ -80,7 +80,7 @@ def solver(input_filename,ts,yin,j0):
                               -(jxe-jxw)/self.mesh.dx)/(rhoa)            
             
             print(t)
-            return np.hstack((dyjdt.flatten(), Tprime))
+            return np.hstack((dyjdt.flatten(order='F'), Tprime))
     
     
     # Input data
@@ -123,15 +123,15 @@ def solver(input_filename,ts,yin,j0):
 
     # Set up objects representing the ODE and the solver
     mesh = Mesh(n,z,x)
-    yj0 = np.zeros(gas.n_species,mesh.n)
+    yj0 = np.zeros((gas.n_species,mesh.n))
     T1 = np.zeros(mesh.n)+T0
     for i in range(0,mesh.n):
         yj0[:,i] = ya
-    y0 = np.hstack((yj0.flatten(), T1))
-    y = pd.DataFrame()
+    y0 = np.hstack((yj0.flatten(order='F'), T1))
+    y = pd.DataFrame(columns = [item for item in range(1,y0.size+2)])
     y.loc[0] = [y0[item] for item in range(0,y0.size)]+[0]
     ode1 = ignitionOde(gas,mesh)
-    solver1 = ode(ode1).set_integrator('dvode', method='bdf', order = 15)
+    solver1 = ode(ode1).set_integrator('dvode', method='bdf', rtol=1e-4, atol=1e-7)
     solver1.set_initial_value(y0, 0)
     dt = dt_max
     count = 1
@@ -139,6 +139,6 @@ def solver(input_filename,ts,yin,j0):
     # Integrate the equations 
     while solver1.successful() and solver1.t < t_sim:
         solver1.integrate(solver1.t + dt)
-        y.loc[count] = [solver1.y[item] for item in range(0,y0.size)]+[solver1.t]
+        y1.loc[count] = [solver1.y[item] for item in range(0,y0.size)]+[solver1.t]
         count += 1
-    return y
+    return y1
