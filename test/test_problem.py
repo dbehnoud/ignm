@@ -1,10 +1,14 @@
-import ignm.source.GasPhaseSolver
+from ignm.source.GasPhaseSolver import solver
 import matplotlib.pyplot as plt
 
 
-y = ignm.source.GasPhaseSolver.solver('ignm/data/example_input.yaml','ignm/data/ts.csv',\
-    'ignm/data/yin.csv','ignm/data/j0.csv' )
+solution = solver('../data/example_input.yaml','../data/ts.csv','../data/yin.csv','../data/j0.csv' )
 
-    
+plt.plot(solution['time'], solution[solution.columns[-1]])
+plt.xlabel('time (s)')
+plt.ylabel('Temperature (K)')
+plt.show()
+
+
     
     

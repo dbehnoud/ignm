@@ -128,7 +128,7 @@ def solver(input_filename,ts,yin,j0):
     for i in range(0,mesh.n):
         yj0[:,i] = ya
     y0 = np.hstack((yj0.flatten(order='F'), T1))
-    y = pd.DataFrame(columns = [item for item in range(1,y0.size+2)])
+    y = pd.DataFrame(columns = [item for item in range(1,y0.size+1)]+["time"])
     y.loc[0] = [y0[item] for item in range(0,y0.size)]+[0]
     ode1 = ignitionOde(gas,mesh)
     solver1 = ode(ode1).set_integrator('dvode', method='bdf', rtol=1e-4, atol=1e-7)
