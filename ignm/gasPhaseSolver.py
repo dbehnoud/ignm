@@ -17,7 +17,7 @@ def yin(t, nsp, yin1):
     return yinter
 
 def solve(input_filename,ts,yin,j0):
-    """ Solve the 1-D ignition model """    
+    """ Solve the 1-D gas-phase combustion """    
     # Input data
     with open(input_filename, 'r') as f:
             inputs = yaml.safe_load(f)
@@ -37,6 +37,7 @@ def solve(input_filename,ts,yin,j0):
     # Temperature and mass flux at inlet
     Tin = interp1d(ts1[:,0], ts1[:,1], kind='linear')
     Jin = interp1d(j01[:,0], j01[:,1], kind='linear')
+    
     
     # Initial condition
     gas = ct.Solution(chem)
@@ -58,7 +59,7 @@ def solve(input_filename,ts,yin,j0):
     y0 = np.hstack((yj0.flatten(order='F'), T1))
     y = pd.DataFrame(columns = [item for item in range(1,y0.size+1)]+["time"])
     y.loc[0] = [y0[item] for item in range(0,y0.size)]+[0]
-    ode1 = IgnitionOde(gas,mesh,constants, Tin, Jin)
+    ode1 = IgnitionOde(gas,mesh,constants, Tin, Jin, yin1)
     solver1 = ode(ode1).set_integrator('dvode', method='bdf', rtol=1e-4, atol=1e-7)
     solver1.set_initial_value(y0, 0)
     dt = dt_max

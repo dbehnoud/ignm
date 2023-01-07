@@ -1,4 +1,5 @@
 import numpy as np
+from ignm.gasPhaseSolver import yin
 
 class IgnitionOde:
     def __init__(self,gas,mesh,constants, Tin, Jin, yin):
@@ -13,7 +14,7 @@ class IgnitionOde:
         self.ya = constants[3]
         self.Tin = Tin
         self.Jin = Jin
-        self.yin = yin
+        self.Yin = yin
 
     def __call__(self, t, y):
         """the ODE function, y' = f(t,y) """
@@ -51,7 +52,7 @@ class IgnitionOde:
         jxw = self.rhoa*ds[0]*(yj[:,0]-self.ya)/(self.mesh.dx/2)            
         jxe = self.rhoa*ds[0]*(self.ya-yj[:,0])/(self.mesh.dx/2) 
         
-        dyjdt[:,0] = (wdot[:,0]*self.MW - self.Jin(t)*(yj[:,0]-self.yin(t))/self.mesh.dz\
+        dyjdt[:,0] = (wdot[:,0]*self.MW - self.Jin(t)*(yj[:,0]-yin(t,self.nsp,self.Yin))/self.mesh.dz\
                         -(jxe-jxw)/self.mesh.dx)/(self.rhoa)
         
         for i in range(1,self.mesh.n):
@@ -62,7 +63,7 @@ class IgnitionOde:
             jxw = self.rhoa*ds[i]*(yj[:,i]-self.ya)/(self.mesh.dx/2)            
             jxe = self.rhoa*ds[i]*(self.ya-yj[:,i])/(self.mesh.dx/2) 
         
-            dyjdt[:,i] = (wdot[:,i]*self.MW - self.Jin(t)*(yj[:,i]-self.yin(t))/self.mesh.dz\
+            dyjdt[:,i] = (wdot[:,i]*self.MW - self.Jin(t)*(yj[:,i]-yin(t,self.nsp,self.Yin))/self.mesh.dz\
                             -(jxe-jxw)/self.mesh.dx)/(self.rhoa)            
         
         print(t)
