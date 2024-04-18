@@ -1,11 +1,16 @@
 %%% 1D gas-phase combustion sub-model
 
+% solves the ODE system with the functions using Strang splitting: 
+% y1' = f1(t,y1)    -- the transport part in equations 15 & 16 in methods
+% y2' = f2(t,y2)	-- the reaction part in equations 15 & 16 in methods
+
+
 % load pyrolysis model solution
 
 load ('pyrolysis_data.mat');
 
 % load species definitions
-load ('kinetics_data.mat');
+load ('solid_kinetics_data.mat');
 
 %%%%%%%%%%%%%%%% create the gas object %%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -13,10 +18,10 @@ load ('kinetics_data.mat');
 % and transport properties
 %
 % The gas phase will be taken from the definition of phase 'gas' in
-% input file 'bio1412_chem.cti,' which contains the kinetics model for
+% input file 'gas_kinetics_data.cti,' which contains the kinetics model for
 % gas-phase combustion
 
-gas = Solution('bio1412_chem.cti');
+gas = Solution('gas_kinetics_data.cti');
 
 % mesh setup
 
@@ -50,7 +55,10 @@ for i=1:Mesh.Jnodes
       yj0(:,i)= ya;
 end
 y0 = transpose([yj0(:); T0(:)]);
+
+% solution array
 y = zeros(nstep+1,length(y0)); 
+
 t2 = transpose(0:.01:nstep*dt);
 y(1,:) = y0;
 
@@ -106,6 +114,7 @@ end
 
 global MW cpa da ya nsp gas rhoa 
 
+%ODE function y1'
 
 function [dydt] = yprime1(t,y,Mesh,Ts,j0,yin)
 
@@ -123,7 +132,6 @@ global cpa da ya nsp gas rhoa
     
     dyjdt = zeros(nsp,Mesh.Jnodes);
     
-    a =.001;
     
     for i=1:Mesh.Jnodes
         yj(:,i)=y(nsp*(i-1)+1:nsp*(i-1)+nsp);
@@ -197,6 +205,8 @@ global cpa da ya nsp gas rhoa
 end
 
 
+%ODE function y2'
+
 function [dydt] = yprime2(t,y,Mesh,Ts,j0,yin, k)
 
 global MW cpa nsp gas rhoa 
@@ -239,6 +249,8 @@ global MW cpa nsp gas rhoa
     dydt = [dyjdt(:); Tprime(:)];
     
 end
+
+% function to evaluate mass fractions at intlet at desired time
 
 function yinter = interpy(tt,xx,yy)
     global nsp
