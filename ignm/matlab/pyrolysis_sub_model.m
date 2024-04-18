@@ -79,10 +79,19 @@ time = 0;
 t = zeros(nstep+1,1); 
 t(1)= 0;
 
+% solution array y2
 yy = zeros(nstep+1,length(y20));
+
+% solution array y1
 yy1 = zeros(nstep+1,length(y10));
+
 yy(1,:) = y20;
 yy1(1,:) = y10;
+
+ye = zeros(length(t),length(g_index)); %mass fraction of gaseous species at top surface
+j0 = zeros(length(t),1); % mass flux of gaseous products at top surface
+Ts = zeros(length(t),1); % temperature at top surface
+Ts(1) = 300;
 
 
 
@@ -97,23 +106,26 @@ for i=1:nstep
     temp = a(end,:);
     temp(temp<0)=1e-30;
 	
+	j0(i+1) = tempflux;
+    ye(i+1,:) = temp(:,end-gsp+1:end)./sum(temp(:,end-gsp+1:end),2);    
+   	
     yy(i+1,:) = temp;
     yy1(i+1,:) = b(end,:);
-    
+    Ts(i+1) = yy1(i+1,nsp*Mesh.Jnodes+Mesh.Jnodes);
     t(i+1) = t(i) + dt;
 end
 
 % save pyrolysis_data.mat yy ye j0 Ts yy1
  
 
-global ycoeff afac nfac ea istart qs g_index s_index  MW gsp nsp p0 yj0
+global ycoeff afac nfac ea istart qs g_index s_index  MW gsp nsp p0 yj0 tempflux
 
 
 % ODE function y2'
 
 function [dydt] = yprime(t,yy,Mesh,yy1)
 
-global ycoeff afac nfac ea istart s_index g_index MW gsp nsp p0 yj0
+global ycoeff afac nfac ea istart s_index g_index MW gsp nsp p0 yj0 tempflux
 
     wdot_mass = zeros(nsp,Mesh.Jnodes); % species mass production rate
     k = zeros(28,Mesh.Jnodes); % reaction rate coefficient
@@ -222,6 +234,8 @@ global ycoeff afac nfac ea istart s_index g_index MW gsp nsp p0 yj0
 	for i=1:Mesh.Jnodes
         drhosdt(i) = - sum(wdot_mass(g_index,i));
     end
+	
+	tempflux = flux(Mesh.Jnodes)+sum(j(:,Mesh.Jnodes),'all');
 
     dydt = [drhogphidt(:); drgpydt(:)];  
 end
