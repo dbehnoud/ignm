@@ -102,6 +102,8 @@ for i=1:nstep
     
     t(i+1) = t(i) + dt;
 end
+
+% save pyrolysis_data.mat yy ye j0 Ts yy1
  
 
 global ycoeff afac nfac ea istart qs g_index s_index  MW gsp nsp p0 yj0
